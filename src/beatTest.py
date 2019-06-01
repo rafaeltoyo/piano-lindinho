@@ -6,7 +6,7 @@ import cv2
 from utils.pathbuilder import PathBuilder
 import time
 
-class FramePicker:
+class PianoVision:
     def __init__(self, filename_wav, filename_mp4, duration):
         self.data, self.sample_rate = librosa.load(filename_wav)
         self.cap = cv2.VideoCapture(filename_mp4)
@@ -23,12 +23,26 @@ class FramePicker:
         #Delta = threshold -> lower numbers means more sensitive to noise
         #Wait = number of samples to wait until next analysis point
         self.peaks = librosa.util.peak_pick(self.onset_envelope,
-                                            pre_max=3, post_max=3, pre_avg=8,
-                                            post_avg=8, delta= 0.1, wait=0)
+                                            pre_max=3, post_max=3, pre_avg=10,
+                                            post_avg=10, delta= 0.1, wait=0)
         #Arrange points into time slots
         self.times = librosa.frames_to_time(np.arange(len(self.onset_envelope)),
                                             sr = self.sample_rate, hop_length = 512)
-
+        D = np.abs(librosa.stft(self.data))
+        plt.figure(figsize=(13 , 7))
+        ax = plt.subplot(2, 1, 1)
+        librosa.display.specshow(librosa.amplitude_to_db(D, ref=np.max),
+                                 y_axis='log', x_axis='time')
+        plt.subplot(2, 1, 2, sharex=ax)
+        plt.plot(self.times, self.onset_envelope, alpha=0.8, label='Onset strength')
+        plt.vlines(self.times[self.peaks], 0,
+                   self.onset_envelope.max(), color='r', alpha=0.8,
+                   label='Selected peaks', linestyle='--')
+        plt.legend(frameon=True, framealpha=0.8)
+        plt.axis('tight')
+        plt.xlim(0, 100)
+        plt.tight_layout()
+        plt.show()
 
 
     def TranscribeNotes(self):
@@ -37,17 +51,22 @@ class FramePicker:
         peak_times = (self.times[self.peaks]*frame_rate)
         print(peak_times)
         index = 0
+        font = cv2.FONT_HERSHEY_SIMPLEX
         while self.cap.isOpened():
             ret, frame = self.cap.read()
             if(ret):
                 if (frames_shown == int(peak_times[index])):
-                    cv2.imshow('Frame', frame)
                     #TODO - Note transcription
-                    cv2.waitKey(0)
                     index += 1
+                cv2.putText(frame, str(index), (0, 200), font, 4, (255, 255, 255), 5, cv2.LINE_AA)
+                cv2.imshow('Frame', frame)
 
                 frames_shown += 1
+                if cv2.waitKey(30) & 0xFF == ord('q'):
+                    break
 
+            else:
+                break
     def end(self):
         self.cap.release()
         cv2.destroyAllWindows()
@@ -57,15 +76,15 @@ class FramePicker:
 # Create a VideoCapture object and read from input file
 # If the input is the camera, pass 0 instead of the video file name
 
-frame_picker = FramePicker(str(PathBuilder().miscdir("Insane.wav")),str(PathBuilder().miscdir("Insane.mp4")), 60 )
+pv = PianoVision(str(PathBuilder().miscdir("Insane.wav")),str(PathBuilder().miscdir("Insane.mp4")), 60 )
 print('vai dar bom')
 
 try:
-    frame_picker.run()
+    pv.TranscribeNotes()
 except KeyboardInterrupt:
     print("nope")
 finally:
-    frame_picker.end()
+    pv.end()
 
 exit(0)
 
