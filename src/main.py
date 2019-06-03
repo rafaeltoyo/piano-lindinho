@@ -45,9 +45,10 @@ class Handler:
         blurred = cv2.blur(self.currentFrame, (3, 3))
         delta = cv2.absdiff(blurred, self.lastFrame)
         delta = cv2.cvtColor(delta, cv2.COLOR_BGR2GRAY)
-        threshFrame = cv2.threshold(delta, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        ret, threshFrame = cv2.threshold(delta, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         #threshFrame = cv2.dilate(threshFrame, None, iterations=2)
-        cv2.imshow('Frame', cv2.UMat(threshFrame))
+        cv2.imshow('Foreground', threshFrame)
+        cv2.imshow('Original', self.currentFrame)
         self.lastFrame = blurred
 
     def run(self):
