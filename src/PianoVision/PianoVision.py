@@ -1,4 +1,7 @@
-class PianoVision:
+ import numpy as np
+ from matplotlib import pyplot as plt
+
+ class PianoVision:
     def __init__(self, filename_wav, filename_mp4, duration):
         self.data, self.sample_rate = librosa.load(filename_wav)
         self.cap = cv2.VideoCapture(filename_mp4)
