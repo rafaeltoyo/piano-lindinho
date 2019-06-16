@@ -4,7 +4,7 @@ import librosa
 from librosa import display
 import cv2
 
-from PianoVision.Keyboard import Keyboard
+from pianovision.Keyboard import Keyboard
 from utils.pathbuilder import PathBuilder
 import time
 
