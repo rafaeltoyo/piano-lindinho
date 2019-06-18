@@ -3,8 +3,7 @@
 
 import cv2
 
-from pianovision.keyboard.bgextractor import BackgroundExtractor
-from pianovision.keyboard.kbextractor import KeyboardExtractor
+from pianovision.keyboard import KeyboardHandler
 
 from utils.resourceloader import ResourceLoader
 
@@ -13,18 +12,10 @@ def main():
 
     data = ResourceLoader("flamingo")
 
-    background = cv2.imread("background.bmp")
-
-    if background is None:
-        background = BackgroundExtractor(data.videoname, sample=110).run()
-        cv2.imwrite("background.bmp", background)
+    kb_handler = KeyboardHandler(data)
 
     # sound_analysis = SoundAnalyser(data.audioname)
     # sound_analysis.plot()
-
-    cv2.imshow("background", background)
-    cv2.imshow("keyboard", KeyboardExtractor(background).run())
-    cv2.waitKey()
 
     def behaviour(frame):
         cv2.imshow("teste", frame)

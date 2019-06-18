@@ -20,14 +20,14 @@ class PathBuilder:
         sufix = 'src' + os.sep + str(__name__).replace('.', os.sep) + '.py'
         self.project = Path(__file__.replace(sufix, ''))
 
-    def miscdir(self, file: str):
+    def miscdir(self, file: str) -> Path:
         return self.project / 'misc' / file
 
-    def __getimgdir(self, dir):
+    def __getimgdir(self, dir) -> Path:
         return self.project / 'imgs' / dir
 
-    def inputdir(self, img: str):
+    def inputdir(self, img: str) -> str:
         return str(self.__getimgdir('input') / img).replace('/', '\\')
 
-    def outputdir(self, img: str):
+    def outputdir(self, img: str) -> str:
         return str(self.__getimgdir('output') / img).replace('/', '\\')
