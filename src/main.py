@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import cv2
+import numpy as np
 
 from pianovision.keyboard import KeyboardHandler
+from pianovision.sound import SoundAnalyser
 
+from utils.videohandler import VideoHandler
 from utils.resourceloader import ResourceLoader
 
 
@@ -17,12 +20,12 @@ def main():
     # sound_analysis = SoundAnalyser(data.audioname)
     # sound_analysis.plot()
 
-    def behaviour(frame):
+    def behaviour(frame: np.ndarray) -> bool:
         cv2.imshow("teste", frame)
         return not (cv2.waitKey(5) & 0xFF == ord('q'))
 
-    # player = VideoHandler(data.videoname, behaviour)
-    # player.run()
+    player = VideoHandler(data.videoname, behaviour)
+    player.run()
 
     exit(0)
 

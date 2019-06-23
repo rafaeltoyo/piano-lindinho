@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import cv2
-import numpy as np
+
 from utils.resourceloader import ResourceLoader
 
-from .bgextractor import BackgroundExtractor
-from .bkextractor import BlackKeysDetector, FirstBlackKeyRecognition
-from .kbextractor import KeyboardBinarizer, KeyboardDetector
+from .data import Keyboard
+from .masking import KeyboardMasking
+
+from .func.detector import KeyboardDetector
+from .func.firstkey import FirstBlackKeyRecognition
 
 
 class KeyboardHandler:
@@ -19,35 +21,26 @@ class KeyboardHandler:
         """
 
         self.__resource = resource
+        self.__keyboard = Keyboard(resource)
 
-        resource.create("background")
+        # Load image
+        self.__keyboard.loadImage()
 
-        with resource["background"] as bgimg:
-            if not bgimg.exists():
-                background = BackgroundExtractor(resource.videoname).run()
-                cv2.imwrite(str(bgimg), background)
-            else:
-                background = cv2.imread(str(bgimg), 0)
+        # Crop keyboard
+        self.__keyboard.cropped = KeyboardDetector(self.__keyboard.image).cropped
 
-        background = cv2.cvtColor(background, cv2.COLOR_GRAY2BGR)
+        # Create mask
+        KeyboardMasking(self.__keyboard)
 
-        kb_detector = KeyboardDetector(background)
-
-        kb_binarizer = KeyboardBinarizer(kb_detector.cropped)
-
-        black_keys = BlackKeysDetector(kb_binarizer.thresh)
-
-        cv2.imshow("teste", background)
+        cv2.imshow("teste", self.__keyboard.image)
         cv2.waitKey()
-        cv2.imshow("teste", kb_detector.cropped)
+        cv2.imshow("teste", self.__keyboard.cropped)
         cv2.waitKey()
-        cv2.imshow("teste", kb_binarizer.thresh)
+        cv2.imshow("teste", self.__keyboard.mask.thresh)
         cv2.waitKey()
-        cv2.imshow("teste", black_keys.edges)
-        cv2.waitKey()
-        cv2.imshow("teste", (black_keys.mask * 255).astype('uint8'))
+        cv2.imshow("teste", self.__keyboard.mask.mask)
         cv2.waitKey()
 
-        first_black_keys = FirstBlackKeyRecognition(black_keys)
+        first_black_keys = FirstBlackKeyRecognition(self.__keyboard.mask.mask[int(self.__keyboard.mask.vlimit/2), :])
 
         print(first_black_keys.first_key_label)
