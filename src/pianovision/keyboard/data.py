@@ -8,6 +8,47 @@ from utils.resourceloader import ResourceLoader
 from utils.bgextractor import BackgroundExtractor
 
 
+class KeyMask:
+
+    def __init__(self, contour, yf, yi=0):
+
+        if len(contour) != 4:
+            raise RuntimeError("Invalid key contours")
+
+        self.yi = yi
+        self.yf = yf
+
+        contour.sort(key=lambda p: p[1])
+
+        initial_points = contour[0:2]
+        initial_points.sort(key=lambda p: p[0])
+
+        final_points = contour[2:4]
+        final_points.sort(key=lambda p: p[0])
+
+        self.x1i = KeyMask.calc_x(yi, *initial_points[0], *final_points[0])
+        self.x1f = KeyMask.calc_x(yf, *initial_points[0], *final_points[0])
+
+        self.x2i = KeyMask.calc_x(yi, *initial_points[1], *final_points[1])
+        self.x2f = KeyMask.calc_x(yf, *initial_points[1], *final_points[1])
+
+    @property
+    def contour(self):
+        return [(self.x1i, self.yi), (self.x1f, self.yf), (self.x2f, self.yf), (self.x2i, self.yi)]
+
+    @property
+    def leftline(self):
+        return [(self.x1i, self.yi), (self.x1f, self.yf)]
+
+    @property
+    def rightline(self):
+        return [(self.x2i, self.yi), (self.x2f, self.yf)]
+
+    @staticmethod
+    def calc_x(y, x1, y1, x2, y2):
+        # (y - y1) = (y2 - y1)/(x2 - x1) * (x - x1)
+        return (x2 - x1) / (y2 - y1) * (y - y1) + x1
+
 class KeyboardMask:
 
     mask: np.ndarray
@@ -26,33 +67,14 @@ class KeyboardMask:
 
         self.vlimit = shape[0]
 
+        self.keys = []
+
     def create_key(self, contour: list):
 
         if len(contour) != 4:
             raise RuntimeError("Invalid key contours")
 
-        contour.sort(key=lambda p: p[1])
-
-        initial_points = contour[0:2]
-        initial_points.sort(key=lambda p: p[0])
-
-        final_points = contour[2:4]
-        final_points.sort(key=lambda p: p[0])
-
-        # (y - y1) = (y2 - y1)/(x2 - x1) * (x - x1)
-        def wirid(y, x1, y1, x2, y2):
-            return (x2-x1)/(y2-y1)*(y-y1) + x1
-
-        key = {
-            'l': {
-                'i': (wirid(0, *initial_points[0], *final_points[0]), 0),
-                'f': (wirid(self.vlimit, *initial_points[0], *final_points[0]), self.vlimit)
-            },
-            'r': {
-                'i': initial_points[1],
-                'f': final_points[1]
-            }
-        }
+        self.keys.append(KeyMask(contour, self.vlimit))
 
 
 class Keyboard:
