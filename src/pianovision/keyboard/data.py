@@ -26,9 +26,33 @@ class KeyboardMask:
 
         self.vlimit = shape[0]
 
-    def create_key(self, box):
+    def create_key(self, contour: list):
 
-        pass
+        if len(contour) != 4:
+            raise RuntimeError("Invalid key contours")
+
+        contour.sort(key=lambda p: p[1])
+
+        initial_points = contour[0:2]
+        initial_points.sort(key=lambda p: p[0])
+
+        final_points = contour[2:4]
+        final_points.sort(key=lambda p: p[0])
+
+        # (y - y1) = (y2 - y1)/(x2 - x1) * (x - x1)
+        def wirid(y, x1, y1, x2, y2):
+            return (x2-x1)/(y2-y1)*(y-y1) + x1
+
+        key = {
+            'l': {
+                'i': (wirid(0, *initial_points[0], *final_points[0]), 0),
+                'f': (wirid(self.vlimit, *initial_points[0], *final_points[0]), self.vlimit)
+            },
+            'r': {
+                'i': initial_points[1],
+                'f': final_points[1]
+            }
+        }
 
 
 class Keyboard:
