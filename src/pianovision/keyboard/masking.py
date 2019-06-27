@@ -18,5 +18,8 @@ class KeyboardMasking:
             self.kb.mask = KeyboardMask(self.kb.cropped)
 
         self.kb.mask.thresh = keyboardThresholding(self.kb.cropped)
+
         self.kb.mask.vlimit = keyboardHorizontalDivision(self.kb.mask.thresh)
-        self.kb.mask.mask = keyboardBlackKeys(self.kb.mask.thresh, vlimit=self.kb.mask.vlimit)
+
+        for box in keyboardBlackKeys(self.kb.mask.thresh, vlimit=self.kb.mask.vlimit):
+            self.kb.mask.addKey(box.tolist())
