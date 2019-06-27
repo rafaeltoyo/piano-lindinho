@@ -4,6 +4,8 @@
 import cv2
 import numpy as np
 
+from ..data import Keyboard, KeyboardMask, KeyMask
+
 
 def keyboardThresholding(image: np.ndarray) -> np.ndarray:
     """
@@ -84,6 +86,7 @@ def keyboardBlackKeys(thresh: np.ndarray, tolerance: float = 0.5, vlimit: int = 
     :param thresh: Binarized keyboard image
     :param tolerance: Error between blob and estimate rectangle
     :param vlimit: Vertical crop (height of black keys)
+    :return:
     """
 
     if vlimit is None:
@@ -92,13 +95,18 @@ def keyboardBlackKeys(thresh: np.ndarray, tolerance: float = 0.5, vlimit: int = 
     # Find contours
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    mask = np.zeros(thresh.shape).astype('uint8')
+    median_area = np.median(np.array([cv2.contourArea(cnt) for cnt in contours]))
 
     for cnt in contours:
 
         # Fit a rectangle on the blob
         rect = cv2.minAreaRect(cnt)
         box = np.intp(cv2.boxPoints(rect))
+
+        # Ignore small blobs
+        blob_area = cv2.contourArea(box)
+        if median_area > blob_area and (median_area - blob_area)/median_area > 0.1:
+            continue
 
         # Create a mask of the blob with original image shape
         blob = np.zeros(thresh.shape).astype(int)
@@ -109,21 +117,10 @@ def keyboardBlackKeys(thresh: np.ndarray, tolerance: float = 0.5, vlimit: int = 
         cv2.fillPoly(rect, [box], 1)
 
         # Compute a error based in difference between blob mask and rectangle mask
-        error = (rect * (1 - blob)).sum()
+        error = float((rect * (1 - blob)).sum())
 
         # Ignore wrong rectangles
         if error / blob.sum() > tolerance:
             continue
 
-        xf1, _ = box[0]
-        xi1, _ = box[1]
-        xf2, _ = box[2]
-        xi2, _ = box[3]
-
-        # Create the key in mask
-        cv2.fillPoly(mask, [box], 255)
-
-    # Cleaning anything outside keys area
-    mask[vlimit:, :] = 0
-
-    return mask
+        yield box

@@ -31,6 +31,7 @@ class KeyboardHandler:
 
         # Create mask
         KeyboardMasking(self.__keyboard)
+        mask = self.__keyboard.mask.createMask()
 
         cv2.imshow("teste", self.__keyboard.image)
         cv2.waitKey()
@@ -38,9 +39,9 @@ class KeyboardHandler:
         cv2.waitKey()
         cv2.imshow("teste", self.__keyboard.mask.thresh)
         cv2.waitKey()
-        cv2.imshow("teste", self.__keyboard.mask.mask)
+        cv2.imshow("teste", mask)
         cv2.waitKey()
 
-        first_black_keys = FirstBlackKeyRecognition(self.__keyboard.mask.mask[int(self.__keyboard.mask.vlimit/2), :])
+        first_black_keys = FirstBlackKeyRecognition(mask[int(self.__keyboard.mask.vlimit/2), :])
 
         print(first_black_keys.first_key_label)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from typing import List
 
 import cv2
 import numpy as np
@@ -8,11 +9,54 @@ from utils.resourceloader import ResourceLoader
 from utils.bgextractor import BackgroundExtractor
 
 
+class KeyMask:
+
+    def __init__(self, contour, yf, yi=0):
+
+        if len(contour) != 4:
+            raise RuntimeError("Invalid key contours")
+
+        self.yi = yi
+        self.yf = yf
+
+        contour.sort(key=lambda p: p[1])
+
+        initial_points = contour[0:2]
+        initial_points.sort(key=lambda p: p[0])
+
+        final_points = contour[2:4]
+        final_points.sort(key=lambda p: p[0])
+
+        self.x1i = KeyMask.calc_x(yi, *initial_points[0], *final_points[0])
+        self.x1f = KeyMask.calc_x(yf, *initial_points[0], *final_points[0])
+
+        self.x2i = KeyMask.calc_x(yi, *initial_points[1], *final_points[1])
+        self.x2f = KeyMask.calc_x(yf, *initial_points[1], *final_points[1])
+
+    @property
+    def contour(self):
+        return [(self.x2i, self.yi), (self.x1i, self.yi), (self.x1f, self.yf), (self.x2f, self.yf)]
+
+    @property
+    def left_line(self):
+        return [(self.x1i, self.yi), (self.x1f, self.yf)]
+
+    @property
+    def right_line(self):
+        return [(self.x2i, self.yi), (self.x2f, self.yf)]
+
+    @staticmethod
+    def calc_x(y, x1, y1, x2, y2):
+        return int((x2 - x1) * (y - y1) / (y2 - y1) + x1)
+
+
 class KeyboardMask:
 
     mask: np.ndarray
     edges: np.ndarray
     thresh: np.ndarray
+    vlimit: int
+    keys: List[KeyMask]
 
     def __init__(self, keyboard: np.ndarray):
 
@@ -26,9 +70,29 @@ class KeyboardMask:
 
         self.vlimit = shape[0]
 
-    def create_key(self, box):
+        self.keys = []
 
-        pass
+    def addKey(self, contour: list):
+
+        if len(contour) != 4:
+            raise RuntimeError("Invalid key contours")
+
+        key = KeyMask(contour, self.vlimit)
+        self.keys.append(key)
+
+        print('-' * 20)
+        print(contour)
+        print(key.contour)
+
+    def createMask(self):
+
+        mask = np.zeros(self.thresh.shape).astype('uint8')
+
+        for key in self.keys:
+            # Create the key in mask
+            cv2.fillPoly(mask, [np.intp(key.contour)], 255)
+
+        return mask
 
 
 class Keyboard:
