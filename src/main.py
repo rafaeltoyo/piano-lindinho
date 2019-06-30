@@ -13,7 +13,7 @@ from utils.resourceloader import ResourceLoader
 
 def main():
 
-    data = ResourceLoader("flamingo")
+    data = ResourceLoader("zenzenzense")
 
     kb_handler = KeyboardHandler(data)
 

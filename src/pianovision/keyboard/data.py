@@ -80,10 +80,6 @@ class KeyboardMask:
         key = KeyMask(contour, self.vlimit)
         self.keys.append(key)
 
-        print('-' * 20)
-        print(contour)
-        print(key.contour)
-
     def createMask(self):
 
         mask = np.zeros(self.thresh.shape).astype('uint8')
@@ -93,6 +89,18 @@ class KeyboardMask:
             cv2.fillPoly(mask, [np.intp(key.contour)], 255)
 
         return mask
+
+    @property
+    def top_x_array(self):
+        return np.ravel(sorted([[k.x1i, k.x2i] for k in self.keys], key=lambda p: p[0]))
+
+    @property
+    def bottom_x_array(self):
+        return np.ravel(sorted([[k.x1f, k.x2f] for k in self.keys], key=lambda p: p[0]))
+
+    @property
+    def xs_array(self):
+        return [i for i in zip(self.top_x_array, self.bottom_x_array)]
 
 
 class Keyboard:

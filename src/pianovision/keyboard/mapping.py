@@ -4,10 +4,12 @@
 import cv2
 import numpy as np
 
+from .data import Keyboard, KeyboardMask
+
 
 class KeyboardMapping:
 
-    def __init__(self, mask: np.ndarray):
+    def __init__(self, kb: Keyboard):
         """
 
         :param mask: Black keys mask

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cv2
+import numpy as np
 
 from utils.resourceloader import ResourceLoader
 
@@ -32,6 +33,10 @@ class KeyboardHandler:
         # Create mask
         KeyboardMasking(self.__keyboard)
         mask = self.__keyboard.mask.createMask()
+
+        print(self.__keyboard.mask.top_x_array)
+        print(self.__keyboard.mask.bottom_x_array)
+        print(self.__keyboard.mask.xs_array)
 
         cv2.imshow("teste", self.__keyboard.image)
         cv2.waitKey()
