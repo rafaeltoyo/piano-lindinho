@@ -4,6 +4,8 @@
 import cv2
 import numpy as np
 
+from ..data import KeyValue
+
 
 class FirstBlackKeyRecognition:
 
@@ -15,23 +17,30 @@ class FirstBlackKeyRecognition:
 
         self.__keys = h_keyboard_sample
 
-        # | i  c  iiii  c  c  iiii  c  iiii  c  c  i |   gaps (c = count, i = ignore)
+        # Keyboard layout
+        # | i  c  iiii  c  c  iiii  c  iiii  c  c  i |  gaps (c = count, i = ignore)
         # |  C# D#    F# G# A#    C# D#    F# G# A#  |  black keys
         # | C  D  E  F  G  A  B  C  D  E  F  G  A  B |  white keys
+        #
+        # Count the number of pixel on small gaps between black keys for fitness measure
+        # So the smallest value of fitness is the best mask fit and we found the first key note
 
+        # Create a mask to extract that gaps (2 octaves)
         gaps = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0]
 
         n_bkeys = 5
         n_gaps = 5
 
+        # Gaps between black keys
         gaps_fitness = []
 
+        # Shifting the gaps mask
         for shift in range(0, n_bkeys):
             # Start iter at first position
             self.__iter = 0
 
             if self.__keys[self.__iter] == 0:
-                # Moving iterator to the first black key
+                # Moving iterator to first black key
                 self.move_iter()
 
             # Keys size values
@@ -60,9 +69,12 @@ class FirstBlackKeyRecognition:
         # Minimum value of fitness
         self.first_key = np.array(gaps_fitness).argmin()
 
+        # Convert the shift value to correct key value
+        self.first_key += KeyValue.KEY_Cs.value
+
     @property
     def first_key_label(self):
-        return ["C#", "D#", "F#", "G#", "A#"][self.first_key]
+        return KeyValue.to_string(self.first_key)
 
     def move_iter(self):
         keys = self.__keys

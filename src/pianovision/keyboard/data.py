@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+from enum import Enum
 from typing import List
 
 import cv2
@@ -7,6 +9,28 @@ import numpy as np
 
 from utils.resourceloader import ResourceLoader
 from utils.bgextractor import BackgroundExtractor
+
+
+class KeyValue(Enum):
+
+    KEY_C = 1
+    KEY_D = 2
+    KEY_E = 3
+    KEY_F = 4
+    KEY_G = 5
+    KEY_A = 6
+    KEY_B = 7
+    KEY_Cs = KEY_Db = 8
+    KEY_Ds = KEY_Eb = 9
+    KEY_Fs = KEY_Gb = 10
+    KEY_Gs = KEY_Ab = 11
+    KEY_As = KEY_Bb = 12
+
+    @staticmethod
+    def to_string(key_value: int):
+        if key_value < 1 or key_value > 12:
+            return ""
+        return ["", "C", "D", "E", "F", "G", "A", "B", "C#", "D#", "F#", "G#", "A#"][key_value]
 
 
 class KeyMask:
@@ -38,6 +62,10 @@ class KeyMask:
         return [(self.x2i, self.yi), (self.x1i, self.yi), (self.x1f, self.yf), (self.x2f, self.yf)]
 
     @property
+    def area(self):
+        return cv2.contourArea(np.array(self.contour))
+
+    @property
     def left_line(self):
         return [(self.x1i, self.yi), (self.x1f, self.yf)]
 
@@ -52,7 +80,6 @@ class KeyMask:
 
 class KeyboardMask:
 
-    mask: np.ndarray
     edges: np.ndarray
     thresh: np.ndarray
     vlimit: int
@@ -64,7 +91,6 @@ class KeyboardMask:
         if len(shape) > 2:
             shape = (shape[0], shape[1])
 
-        self.mask = np.zeros(shape)
         self.edges = np.zeros(shape)
         self.thresh = np.zeros(shape)
 
@@ -99,7 +125,7 @@ class KeyboardMask:
         return np.ravel(sorted([[k.x1f, k.x2f] for k in self.keys], key=lambda p: p[0]))
 
     @property
-    def xs_array(self):
+    def black_x_array(self):
         return [i for i in zip(self.top_x_array, self.bottom_x_array)]
 
 

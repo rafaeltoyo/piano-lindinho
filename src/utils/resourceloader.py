@@ -22,6 +22,10 @@ class ResourceLoader:
         self.__images = {}
 
     @property
+    def name(self):
+        return self.__name
+
+    @property
     def videoname(self) -> str:
         return str(self.__video_file)
 

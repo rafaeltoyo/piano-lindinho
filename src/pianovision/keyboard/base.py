@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import cv2
-import numpy as np
 
 from utils.resourceloader import ResourceLoader
 
-from .data import Keyboard
+from .data import Keyboard, KeyValue
 from .masking import KeyboardMasking
+from .mapping import KeyboardMapping
 
-from .func.detector import KeyboardDetector
+from pianovision.keyboard.detector import KeyboardDetector
 from .func.firstkey import FirstBlackKeyRecognition
 
 
@@ -22,21 +22,30 @@ class KeyboardHandler:
         """
 
         self.__resource = resource
-        self.__keyboard = Keyboard(resource)
 
-        # Load image
+        # Creating the keyboard representation
+        self.__keyboard = Keyboard(resource)
         self.__keyboard.loadImage()
 
         # Crop keyboard
-        self.__keyboard.cropped = KeyboardDetector(self.__keyboard.image).cropped
+        KeyboardDetector(self.__keyboard)
 
-        # Create mask
-        KeyboardMasking(self.__keyboard)
+        # Create mask for black keys
+        kbMasking = KeyboardMasking(self.__keyboard)
         mask = self.__keyboard.mask.createMask()
+
+        # TODO Estimate white keys
 
         print(self.__keyboard.mask.top_x_array)
         print(self.__keyboard.mask.bottom_x_array)
-        print(self.__keyboard.mask.xs_array)
+        print(self.__keyboard.mask.black_x_array)
+
+        # TODO Keys mapping
+        kbMapping = KeyboardMapping(self.__keyboard)
+        # Estimate first key
+        print(KeyValue.to_string(kbMapping.estimate_first_black_key()))
+
+        # FIXME Debug the result
 
         cv2.imshow("teste", self.__keyboard.image)
         cv2.waitKey()
@@ -46,7 +55,3 @@ class KeyboardHandler:
         cv2.waitKey()
         cv2.imshow("teste", mask)
         cv2.waitKey()
-
-        first_black_keys = FirstBlackKeyRecognition(mask[int(self.__keyboard.mask.vlimit/2), :])
-
-        print(first_black_keys.first_key_label)
