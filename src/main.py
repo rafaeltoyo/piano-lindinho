@@ -21,7 +21,7 @@ def main():
     # sound_analysis.plot()
 
     def behaviour(frame: np.ndarray) -> bool:
-        cv2.imshow("teste", frame)
+        cv2.imshow("video", frame)
         return not (cv2.waitKey(5) & 0xFF == ord('q'))
 
     player = VideoHandler(data.videoname, behaviour)

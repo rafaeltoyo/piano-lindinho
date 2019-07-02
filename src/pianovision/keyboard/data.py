@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from typing import List
+
+from enum import IntEnum
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -9,12 +11,62 @@ from utils.resourceloader import ResourceLoader
 from utils.bgextractor import BackgroundExtractor
 
 
+class KeyValue(IntEnum):
+    KEY_C = 1
+    KEY_D = 2
+    KEY_E = 3
+    KEY_F = 4
+    KEY_G = 5
+    KEY_A = 6
+    KEY_B = 7
+    KEY_Cs = KEY_Db = 8
+    KEY_Ds = KEY_Eb = 9
+    KEY_Fs = KEY_Gb = 10
+    KEY_Gs = KEY_Ab = 11
+    KEY_As = KEY_Bb = 12
+
+    @staticmethod
+    def ordered_keys():
+        return [KeyValue.KEY_C, KeyValue.KEY_Cs,
+                KeyValue.KEY_D, KeyValue.KEY_Ds,
+                KeyValue.KEY_E,
+                KeyValue.KEY_F, KeyValue.KEY_Fs,
+                KeyValue.KEY_G, KeyValue.KEY_Gs,
+                KeyValue.KEY_A, KeyValue.KEY_As,
+                KeyValue.KEY_B]
+
+    @staticmethod
+    def to_string(key_value: int) -> str:
+        if key_value is None or key_value < 1 or key_value > 12:
+            return ""
+        return ["", "C", "D", "E", "F", "G", "A", "B", "C#", "D#", "F#", "G#", "A#"][key_value]
+
+    @staticmethod
+    def sharp(key_value: int) -> int:
+        if key_value < 1 or key_value > 12:
+            return 0
+        keys = KeyValue.ordered_keys()
+        return keys[(keys.index(key_value) + 1) % len(keys)]
+
+    @staticmethod
+    def flat(key_value: int) -> int:
+        if key_value < 1 or key_value > 12:
+            return 0
+        keys = KeyValue.ordered_keys()
+        return keys[(keys.index(key_value) + len(keys) - 1) % len(keys)]
+
+
 class KeyMask:
 
-    def __init__(self, contour, yf, yi=0):
+    id: KeyValue
+    octave: int
 
+    def __init__(self, contour, yf, yi=0):
         if len(contour) != 4:
             raise RuntimeError("Invalid key contours")
+
+        self.id = None
+        self.octave = 0
 
         self.yi = yi
         self.yf = yf
@@ -33,30 +85,55 @@ class KeyMask:
         self.x2i = KeyMask.calc_x(yi, *initial_points[1], *final_points[1])
         self.x2f = KeyMask.calc_x(yf, *initial_points[1], *final_points[1])
 
+        # utils
+        self.xi = int((self.x2i + self.x1i) / 2)
+        self.xf = int((self.x2f + self.x1f) / 2)
+        self.pi = (self.xi, self.yi)
+        self.pf = (self.xf, self.yf)
+
     @property
-    def contour(self):
+    def contour(self) -> List[Tuple[int, int]]:
         return [(self.x2i, self.yi), (self.x1i, self.yi), (self.x1f, self.yf), (self.x2f, self.yf)]
 
     @property
-    def left_line(self):
+    def area(self) -> int:
+        return cv2.contourArea(np.array(self.contour))
+
+    @property
+    def left_line(self) -> List[Tuple[int, int]]:
         return [(self.x1i, self.yi), (self.x1f, self.yf)]
 
     @property
-    def right_line(self):
+    def right_line(self) -> List[Tuple[int, int]]:
         return [(self.x2i, self.yi), (self.x2f, self.yf)]
 
+    @property
+    def pixel_value(self) -> int:
+        return KeyMask.encode(self.id, self.octave)
+
     @staticmethod
-    def calc_x(y, x1, y1, x2, y2):
+    def calc_x(y: float, x1: float, y1: float, x2: float, y2: float) -> int:
         return int((x2 - x1) * (y - y1) / (y2 - y1) + x1)
+
+    @staticmethod
+    def decode(pixel: int) -> Tuple[KeyValue, int]:
+        octave = (pixel & 0b011110000) >> 4
+        note = (pixel & 0b01111)
+        return KeyValue(note), octave
+
+    @staticmethod
+    def encode(note: KeyValue, octave: int) -> int:
+        if note is None:
+            return 255
+        return (int(note) & 0b01111) | ((octave & 0b01111) << 4)
 
 
 class KeyboardMask:
-
-    mask: np.ndarray
     edges: np.ndarray
     thresh: np.ndarray
     vlimit: int
-    keys: List[KeyMask]
+    bkeys: List[KeyMask]
+    wkeys: List[KeyMask]
 
     def __init__(self, keyboard: np.ndarray):
 
@@ -64,13 +141,13 @@ class KeyboardMask:
         if len(shape) > 2:
             shape = (shape[0], shape[1])
 
-        self.mask = np.zeros(shape)
         self.edges = np.zeros(shape)
         self.thresh = np.zeros(shape)
 
         self.vlimit = shape[0]
 
-        self.keys = []
+        self.bkeys = []
+        self.wkeys = []
 
     def addKey(self, contour: list):
 
@@ -78,25 +155,53 @@ class KeyboardMask:
             raise RuntimeError("Invalid key contours")
 
         key = KeyMask(contour, self.vlimit)
-        self.keys.append(key)
+        self.bkeys.append(key)
 
-        print('-' * 20)
-        print(contour)
-        print(key.contour)
+    def createMask(self, visual: bool = False):
 
-    def createMask(self):
+        # Font cuz unicorns exist
+        font = cv2.FONT_HERSHEY_SIMPLEX
 
         mask = np.zeros(self.thresh.shape).astype('uint8')
 
-        for key in self.keys:
+        swap = False
+        for key in self.wkeys:
             # Create the key in mask
-            cv2.fillPoly(mask, [np.intp(key.contour)], 255)
+            if visual:
+                cv2.fillPoly(mask, [np.intp(key.contour)], 64 if swap else 32)
+                swap = not swap
+
+                text = KeyValue.to_string(key.id) + str(key.octave)
+                cv2.putText(mask, text, (key.xf, self.thresh.shape[0] - 50), font, 0.4, 255, 1, cv2.LINE_AA)
+            else:
+                cv2.fillPoly(mask, [np.intp(key.contour)], key.pixel_value)
+
+        for key in self.bkeys:
+            # Create the key in mask
+            if visual:
+                cv2.fillPoly(mask, [np.intp(key.contour)], 127)
+
+                text = KeyValue.to_string(key.id) + str(key.octave)
+                cv2.putText(mask, text, (key.xi, 50), font, 0.4, 255, 1, cv2.LINE_AA)
+            else:
+                cv2.fillPoly(mask, [np.intp(key.contour)], key.pixel_value)
 
         return mask
 
+    @property
+    def top_x_array(self):
+        return np.ravel(sorted([[k.x1i, k.x2i] for k in self.bkeys], key=lambda p: p[0]))
+
+    @property
+    def bottom_x_array(self):
+        return np.ravel(sorted([[k.x1f, k.x2f] for k in self.bkeys], key=lambda p: p[0]))
+
+    @property
+    def black_x_array(self):
+        return [i for i in zip(self.top_x_array, self.bottom_x_array)]
+
 
 class Keyboard:
-
     resource: ResourceLoader
     image: np.ndarray
     cropped: np.ndarray
