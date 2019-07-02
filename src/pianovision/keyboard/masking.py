@@ -21,5 +21,8 @@ class KeyboardMasking:
 
         self.kb.mask.vlimit = keyboardHorizontalDivision(self.kb.mask.thresh)
 
+        self.kb.mask.thresh[self.kb.mask.vlimit:] = 0
+
         for box in keyboardBlackKeys(self.kb.mask.thresh, vlimit=self.kb.mask.vlimit):
             self.kb.mask.addKey(box.tolist())
+        self.kb.mask.bkeys.sort(key=lambda k: k.xi)

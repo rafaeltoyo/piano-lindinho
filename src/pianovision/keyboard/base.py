@@ -10,7 +10,6 @@ from .masking import KeyboardMasking
 from .mapping import KeyboardMapping
 
 from pianovision.keyboard.detector import KeyboardDetector
-from .func.firstkey import FirstBlackKeyRecognition
 
 
 class KeyboardHandler:
@@ -32,7 +31,6 @@ class KeyboardHandler:
 
         # Create mask for black keys
         kbMasking = KeyboardMasking(self.__keyboard)
-        mask = self.__keyboard.mask.createMask()
 
         # TODO Estimate white keys
 
@@ -41,9 +39,10 @@ class KeyboardHandler:
         print(self.__keyboard.mask.black_x_array)
 
         # TODO Keys mapping
+
         kbMapping = KeyboardMapping(self.__keyboard)
         # Estimate first key
-        print(KeyValue.to_string(kbMapping.estimate_first_black_key()))
+        print(KeyValue.to_string(self.__keyboard.mask.bkeys[0].id))
 
         # FIXME Debug the result
 
@@ -53,5 +52,5 @@ class KeyboardHandler:
         cv2.waitKey()
         cv2.imshow("teste", self.__keyboard.mask.thresh)
         cv2.waitKey()
-        cv2.imshow("teste", mask)
-        cv2.waitKey()
+        cv2.imshow("teste", self.__keyboard.mask.createMask(visual=False))
+        # cv2.waitKey()

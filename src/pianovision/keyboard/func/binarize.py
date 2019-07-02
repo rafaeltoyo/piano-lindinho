@@ -4,8 +4,6 @@
 import cv2
 import numpy as np
 
-from ..data import Keyboard, KeyboardMask, KeyMask
-
 
 def keyboardThresholding(image: np.ndarray) -> np.ndarray:
     """
@@ -105,7 +103,7 @@ def keyboardBlackKeys(thresh: np.ndarray, tolerance: float = 0.5, vlimit: int = 
 
         # Ignore small blobs
         blob_area = cv2.contourArea(box)
-        if median_area > blob_area and (median_area - blob_area)/median_area > 0.1:
+        if median_area > blob_area and (median_area - blob_area) / median_area > 0.1:
             continue
 
         # Create a mask of the blob with original image shape
