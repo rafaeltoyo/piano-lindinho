@@ -13,7 +13,7 @@ from utils.resourceloader import ResourceLoader
 
 def main():
 
-    data = ResourceLoader("flamingo")
+    data = ResourceLoader("alice")
 
     kb_handler = KeyboardHandler(data)
 
@@ -30,5 +30,5 @@ def main():
     exit(0)
 
 
-if __name__ == "__main__":
+if __name__ ==  "__main__":
     main()

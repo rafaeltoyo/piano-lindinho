@@ -20,6 +20,7 @@ class KeyboardMapping:
         keysize = np.array([key.area for key in self.kb.mask.bkeys]).mean()
 
         estimateBlackKey(keyboard)
+
         self.kb.mask.wkeys.extend(createWhiteKeys(self.kb))
 
         estimateOctaves(self.kb)
@@ -98,6 +99,5 @@ class KeyboardMapping:
 
         # Pixel value
         pixel = int(current_key) & (current_octave << 4)
-
         # Draw the white key in mapping
         cv2.fillPoly(mapping, np.array([xi, xip, xfp, xf]), pixel)

@@ -1,9 +1,7 @@
 import cv2
 import numpy as np
-import pianovision.KeyboardAnalyser
-from time import sleep
 
-cap = cv2.VideoCapture('sparkle.mp4')
+cap = cv2.VideoCapture('alice.mp4')
 ret, current_frame = cap.read()
 previous_frame = current_frame
 
@@ -22,6 +20,8 @@ red_difference = 50
 red_threshold = 160
 
 previous_hand_mask = np.zeros(previous_frame_gray.shape)
+
+
 
 while(cap.isOpened()):
     current_frame_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
@@ -78,6 +78,7 @@ while(cap.isOpened()):
     previous_frame_hsv = current_frame_hsv.copy()
     previous_hand_mask = hand_mask
     ret, current_frame = cap.read()
+
 
 cap.release()
 cv2.destroyAllWindows()
