@@ -37,12 +37,6 @@ class MotionDetector:
         hand_mask = np.zeros(distance.shape)
         hand_mask[distance > self.red_hand_threshold] = 1
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
-        im = np.zeros((50, 50), dtype=np.uint8)
-        im[50:, 50:] = 255
-
-        hand_mask = cv2.dilate(hand_mask, kernel, iterations=2)
-
         return(hand_mask)
 
 
@@ -50,15 +44,24 @@ class MotionDetector:
         current_frame_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
         previous_frame_gray = cv2.cvtColor(previous_frame, cv2.COLOR_BGR2GRAY)
 
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+        im = np.zeros((50, 50), dtype=np.uint8)
+        im[50:, 50:] = 255
+
+        current_hand_mask = cv2.dilate(current_hand_mask, kernel, iterations=5)
+        previous_hand_mask = cv2.dilate(previous_hand_mask, kernel, iterations=5)
+
+        hand_region = cv2.blur(current_hand_mask, (1, current_hand_mask.shape[1]))
         frame_diff = cv2.absdiff(current_frame_gray, previous_frame_gray)
-        frame_diff[self.threshold_image > 0 ] = frame_diff[self.threshold_image > 0]*100
+
         frame_diff[current_hand_mask == 1] = 0
         frame_diff[previous_hand_mask == 1] = 0
-        frame_diff[int(frame_diff.shape[0]/2):frame_diff.shape[0],:] = frame_diff[int(frame_diff.shape[0]/2):frame_diff.shape[0],:]/2
+        frame_diff[hand_region == 0] = 0
 
 
-        frame_diff = cv2.blur(frame_diff, (5 ,5))
-        frame_diff = cv2.normalize(frame_diff, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+        frame_diff[self.threshold_image > 0] = frame_diff[self.threshold_image > 0] * 100
+        frame_diff = cv2.blur(frame_diff, (3,frame_diff.shape[0]))
+        frame_diff[self.threshold_image == 0] = 0
 
         return(frame_diff)
 
@@ -71,29 +74,32 @@ class MotionDetector:
         """"Detects the motion and the hand mask for the current frame"""
         self.current_hand_mask = self.detect_hand(current_frame)
         self.previous_hand_mask= self.detect_hand(previous_frame)
+
         white_key_diff = self.detect_white_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
         black_key_diff = self.detect_black_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
 
         """"Sums up the values fo the two images"""
         total_diff = white_key_diff + black_key_diff
-
         """"Removes noisy values from image"""
-        for kernel_size in [3, 7, 10, 12]:
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, kernel_size))
-            im = np.zeros((50, 50), dtype=np.uint8)
-            im[50:, 50:] = 255
-            total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=1)
-        """"Removes noisy values from image"""
-        # for kernel_size in [3, 5, 7]:
-        #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, 1))
+        # for kernel_size in [5]:
+        #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, 3))
         #     im = np.zeros((50, 50), dtype=np.uint8)
         #     im[50:, 50:] = 255
-        #     total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=1)
+        #     total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=2)
+
+        """"Removes noisy values from image"""
+        for kernel_size in [15, 9, 5, 3]:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, kernel_size))
+            im = np.zeros((50, 50), dtype=np.uint8)
+            im[50:, 50:] = 255
+            total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=3)
+
+        total_diff = cv2.normalize(total_diff, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
         """"Collects the motion values from the motion image using the key map"""
         for key_number in range(len(self.key_motion_values)):
             self.key_motion_values[key_number] = np.sum(total_diff[self.key_map == key_number])
-        pressed_keys = self.gets_pressed_keys(self.key_motion_values, 3.7)
+        pressed_keys = self.gets_pressed_keys(self.key_motion_values, 4)
         for pressed_key in pressed_keys:
             self.map_copy[self.key_map == pressed_key] = 1000
         cv2.imshow('pressed_key ',self.map_copy )
@@ -101,6 +107,33 @@ class MotionDetector:
         for pressed_key in pressed_keys:
             self.map_copy[self.key_map == pressed_key ] = self.key_map[self.key_map == pressed_key]
 
+    def get_motion_frame(self,  current_frame, previous_frame):
+        """"Detects the motion and the hand mask for the current frame"""
+        self.current_hand_mask = self.detect_hand(current_frame)
+        self.previous_hand_mask= self.detect_hand(previous_frame)
+
+        white_key_diff = self.detect_white_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
+        black_key_diff = self.detect_black_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
+
+        """"Sums up the values fo the two images"""
+        total_diff = white_key_diff + black_key_diff
+        """"Removes noisy values from image"""
+        # for kernel_size in [5]:
+        #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, 3))
+        #     im = np.zeros((50, 50), dtype=np.uint8)
+        #     im[50:, 50:] = 255
+        #     total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=2)
+
+        """"Removes noisy values from image"""
+        for kernel_size in [15, 9, 5, 3]:
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, kernel_size))
+            im = np.zeros((50, 50), dtype=np.uint8)
+            im[50:, 50:] = 255
+            total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=3)
+
+        total_diff = cv2.normalize(total_diff, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+
+        return(total_diff)
 
     def gets_pressed_keys(self, motion_values, initial_robustness):
         """Gets statistical data from the array"""

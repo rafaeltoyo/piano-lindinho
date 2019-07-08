@@ -15,7 +15,7 @@ from utils.videohandler import VideoHandler
 from time import sleep
 import matplotlib.pyplot as plt
 import numpy as np
-
+np.seterr(divide='ignore', invalid='ignore')
 __resource = ResourceLoader("alice")
 
 # Creating the keyboard representation
@@ -47,15 +47,6 @@ print(KeyValue.to_string(__keyboard.mask.bkeys[0].id))
 
 # FIXME Debug the result
 
-cv2.imshow("teste", __keyboard.image)
-cv2.waitKey()
-cv2.imshow("teste", __keyboard.cropped)
-cv2.waitKey()
-cv2.imshow("teste", __keyboard.mask.thresh)
-cv2.waitKey()
-cv2.imshow("teste", __keyboard.mask.createMask(visual=False))
-# cv2.waitKey()
-
 
 cap = cv2.VideoCapture('alice.mp4')
 ret, current_frame = cap.read()
@@ -64,9 +55,6 @@ previous_frame = current_frame
 
 previous_frame_gray = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
 previous_frame_hsv =  cv2.cvtColor(current_frame, cv2.COLOR_BGR2HSV)
-
-cv2.imshow('frame_test', current_frame)
-cv2.waitKey(0)
 
 # min_white_key_val = int(input('type in what the minimum white key value is: '))
 # max_white_key_sat = int(input('type in what the maximum white key saturation is: '))
@@ -97,20 +85,20 @@ white_key_mask[__keyboard.mask.thresh == 0] = 1
 
 motion_detector = MotionDetector(40, 2, white_key_mask, mask)
 
-
+detection_delay = 1
 
 while(cap.isOpened()):
     ret, current_frame = cap.read()
     if(ret):
         current_frame = current_frame[350:470,:]
         if(framenumber == int(peak_frames[cur_beat])):
-            motion_detector.detect_key_stroke(current_frame, previous_frame)
             cv2.imshow('video', current_frame)
             cv2.waitKey(0)
             cur_beat +=1
+        if(framenumber+detection_delay == int(peak_frames[cur_beat])):
+            motion_detector.detect_key_stroke(current_frame, previous_frame)
         framenumber+=1
         previous_frame = current_frame
-
 
 cap.release()
 cv2.destroyAllWindows()
