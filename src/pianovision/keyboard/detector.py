@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import numpy as np
 
 from .data import Keyboard
 from utils.pathbuilder import PathBuilder
@@ -22,10 +23,13 @@ class KeyboardDetector:
         image = self.kb.image
         crops = self.__crops[self.kb.resource.name]
 
-        yi = crops["yi"] if "yi" in crops.keys() else 0
-        yf = crops["yf"] if "yf" in crops.keys() else image.shape[0]
+        self.yi = crops["yi"] if "yi" in crops.keys() else 0
+        self.yf = crops["yf"] if "yf" in crops.keys() else image.shape[0]
 
-        xi = crops["xi"] if "xi" in crops.keys() else 0
-        xf = crops["xf"] if "xf" in crops.keys() else image.shape[1]
+        self.xi = crops["xi"] if "xi" in crops.keys() else 0
+        self.xf = crops["xf"] if "xf" in crops.keys() else image.shape[1]
 
-        self.kb.cropped = image[yi:yf, xi:xf]
+        self.kb.cropped = self.crop(image)
+
+    def crop(self, image: np.ndarray) -> np.ndarray:
+        return image[self.yi:self.yf, self.xi:self.xf]
