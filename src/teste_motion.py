@@ -77,7 +77,6 @@ framenumber = 0
 cur_beat = 1
 
 max_mask = np.max(mask)
-print(np.sum(previous_frame_gray[mask == 124]))
 key_motion_values = np.zeros(((max_mask >> 4)*12) + (max_mask&15))
 
 white_key_mask = np.zeros(__keyboard.mask.thresh.shape)
@@ -96,7 +95,7 @@ while(cap.isOpened()):
             cv2.waitKey(0)
             cur_beat +=1
         if(framenumber+detection_delay == int(peak_frames[cur_beat])):
-            motion_detector.detect_key_stroke(current_frame, previous_frame)
+            motion_detector.detect_key_stroke(current_frame, previous_frame, True)
         framenumber+=1
         previous_frame = current_frame
 

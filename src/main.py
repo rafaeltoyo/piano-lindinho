@@ -14,7 +14,7 @@ from utils.resourceloader import ResourceLoader
 def main():
     np.seterr(divide='ignore', invalid='ignore')
 
-    data = ResourceLoader("flamingo")
+    data = ResourceLoader("alice")
 
     MotionHandler(data, debug=True)
 
