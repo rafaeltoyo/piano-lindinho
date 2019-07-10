@@ -103,7 +103,7 @@ class MotionDetector:
         for pressed_key in pressed_keys:
             self.map_copy[self.key_map == pressed_key] = 1000
         cv2.imshow('pressed_key ',self.map_copy )
-        cv2.imshow('difference seen ', total_diff )
+        cv2.imshow('difference seen ', np.uint8(total_diff * 255))
         for pressed_key in pressed_keys:
             self.map_copy[self.key_map == pressed_key ] = self.key_map[self.key_map == pressed_key]
 
@@ -136,18 +136,25 @@ class MotionDetector:
         return(total_diff)
 
     def gets_pressed_keys(self, motion_values, initial_robustness):
+
         """Gets statistical data from the array"""
         mean = np.mean(motion_values)
         standard_dev = np.std(motion_values)
+
+        if standard_dev.min() <= 0:
+            return []
+
         """"Computes Z scores for each array element"""
         z_scores = (motion_values - mean)/standard_dev
         pressed_keys = []
         robustness = initial_robustness
+
         while(len(pressed_keys) == 0):
             pressed_keys = []
             for key_value in range(len(z_scores)):
                 if z_scores[key_value] > robustness:
                     pressed_keys.append(key_value)
             robustness -=0.2
+
         """"Returns the values seen that have higher than X standard deviations"""
         return(pressed_keys)
