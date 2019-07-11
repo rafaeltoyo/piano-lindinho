@@ -52,7 +52,7 @@ class MotionDetector:
 
 
         if not is_synthesia:
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (15, 15))
             im = np.zeros((50, 50), dtype=np.uint8)
             im[50:, 50:] = 255
             current_hand_mask = cv2.dilate(current_hand_mask, kernel, iterations=2)
@@ -62,6 +62,13 @@ class MotionDetector:
             previous_hand_mask = 1 - previous_hand_mask
             current_hand_mask = cv2.GaussianBlur(current_hand_mask, (19,19), sigmaY=5, sigmaX=1)
             previous_hand_mask = cv2.GaussianBlur(previous_hand_mask, (19,19), sigmaY=5, sigmaX=1)
+            cond_current_shadow = current_frame_gray < 215
+            cond_previous_shadow = previous_frame_gray < 205
+
+            shadow_mask = np.bitwise_or(cond_previous_shadow, cond_current_shadow)
+            shadow_mask = np.float32(shadow_mask)
+            shadow_mask = cv2.morphologyEx(shadow_mask, cv2.MORPH_OPEN, kernel, iterations=2)
+            shadow_mask = cv2.GaussianBlur(shadow_mask, (19,19), sigmaY=5, sigmaX=2)
 
         frame_diff = cv2.absdiff(current_frame_gray, previous_frame_gray)
 
@@ -69,11 +76,12 @@ class MotionDetector:
             frame_diff = frame_diff*current_hand_mask
             frame_diff = frame_diff*previous_hand_mask
             frame_diff[hand_region == 0] = 0
+            frame_diff[shadow_mask > 0] = 0
             cv2.imshow('hand', current_hand_mask)
 
-        frame_diff[self.threshold_image > 0] = frame_diff[self.threshold_image > 0] * 100
-        frame_diff = cv2.blur(frame_diff, (3,frame_diff.shape[0]))
+        frame_diff[self.threshold_image > 0] = frame_diff[self.threshold_image > 0] * 5
         frame_diff[self.threshold_image == 0] = 0
+        frame_diff = cv2.blur(frame_diff, (3,frame_diff.shape[0]))
 
         return(frame_diff)
 
@@ -105,17 +113,14 @@ class MotionDetector:
         """"Removes noisy values from image"""
         for kernel_size in [11]:
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, 3))
-            im = np.zeros((50, 50), dtype=np.uint8)
-            im[50:, 50:] = 255
             total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=1)
 
         """"Removes noisy values from image"""
         for kernel_size in [5, 3, 5, 3]:
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, kernel_size))
-            im = np.zeros((50, 50), dtype=np.uint8)
-            im[50:, 50:] = 255
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, kernel_size))
             total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=2)
 
+        total_diff = total_diff*self.threshold_image
         total_diff = cv2.normalize(total_diff, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
         """"Collects the motion values from the motion image using the key map"""

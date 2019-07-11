@@ -25,11 +25,11 @@ class SoundAnalyser:
         # TODO - making peak_pick parameters related to tempo and beat
 
         self.peaks: np.ndarray = librosa.util.peak_pick(self.onset_envelope,
-                                                        pre_max=3,
-                                                        post_max=3,
-                                                        pre_avg=10,
-                                                        post_avg=10,
-                                                        delta=0.12,
+                                                        pre_max=1,
+                                                        post_max=1,
+                                                        pre_avg=3,
+                                                        post_avg=3,
+                                                        delta=0.1,
                                                         wait=0)
 
         self.times: np.ndarray = librosa.frames_to_time(np.arange(len(self.onset_envelope)),
