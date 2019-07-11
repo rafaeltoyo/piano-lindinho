@@ -42,7 +42,7 @@ class MotionHandler:
         white_key_mask[thresh == 0] = 1
 
         # Motion detector
-        self.motion_detector = MotionDetector(40, 2, white_key_mask, mask)
+        self.motion_detector = MotionDetector(40, 2, white_key_mask, mask, self.kbHandler.keyboard)
 
         # Create a video handler
         player = VideoHandler(resource.videoname, self.process_frame)
@@ -65,7 +65,7 @@ class MotionHandler:
 
         if (self.current_frame_iter + self.beat_detection_delay) == int(self.beat_frames[self.current_beat]):
 
-            self.motion_detector.detect_key_stroke(self.current_frame, self.previous_frame)
+            self.motion_detector.detect_key_stroke(self.current_frame, self.previous_frame, False)
             cv2.waitKey(0 if self.debug else 5)
 
         # Show current frame

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from pianovision.keyboard.data import Keyboard, KeyValue
 
 class MotionDetector:
     """ Senses the motion in the video comparing two at a time images, the current with the previous
@@ -10,9 +11,13 @@ class MotionDetector:
         key_mask: keyboard key mask
         initial_buffer: Initial Buffer for motion detection
     """
-    def __init__(self, red_hand_threshold, hand_mask_dilation_size,threshold_image, key_map):
+    def __init__(self, red_hand_threshold, hand_mask_dilation_size,threshold_image, key_map, keyboard:Keyboard):
         """"Input type: first_image = 3 channel image of the current cropped keyboard frame"""
-
+        self.keyboard = keyboard #
+        self.key_mappings = keyboard.mask.bkeys
+        self.key_mappings.extend(keyboard.mask.wkeys)
+        for key in self.key_mappings:
+            print(key.encode(key.id, key.octave), key.x1i )
         self.red_hand_threshold = red_hand_threshold
         self.hand_mask_dilation = hand_mask_dilation_size
         self.threshold_image = threshold_image
@@ -35,7 +40,7 @@ class MotionDetector:
         distance[rgb_frame[:,:,2] < 160] = 0
         distance[distance > 200] = 0
         hand_mask = np.zeros(distance.shape)
-        hand_mask[distance > self.red_hand_threshold] = 1
+        hand_mask[distance > self.red_hand_threshold/2] = 1
 
         return(hand_mask)
 
@@ -46,22 +51,25 @@ class MotionDetector:
         previous_frame_gray = cv2.cvtColor(previous_frame, cv2.COLOR_BGR2GRAY)
 
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
-        im = np.zeros((50, 50), dtype=np.uint8)
-        im[50:, 50:] = 255
-
         if not is_synthesia:
-            current_hand_mask = cv2.dilate(current_hand_mask, kernel, iterations=3)
-            previous_hand_mask = cv2.dilate(previous_hand_mask, kernel, iterations=3)
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+            im = np.zeros((50, 50), dtype=np.uint8)
+            im[50:, 50:] = 255
+            current_hand_mask = cv2.dilate(current_hand_mask, kernel, iterations=2)
+            previous_hand_mask = cv2.dilate(previous_hand_mask, kernel, iterations=2)
+            hand_region = cv2.blur(current_hand_mask, (1, current_hand_mask.shape[1]))
+            current_hand_mask = 1 - current_hand_mask
+            previous_hand_mask = 1 - previous_hand_mask
+            current_hand_mask = cv2.GaussianBlur(current_hand_mask, (19,19), sigmaY=5, sigmaX=1)
+            previous_hand_mask = cv2.GaussianBlur(previous_hand_mask, (19,19), sigmaY=5, sigmaX=1)
 
-        hand_region = cv2.blur(current_hand_mask, (11, current_hand_mask.shape[1]))
         frame_diff = cv2.absdiff(current_frame_gray, previous_frame_gray)
 
         if not is_synthesia:
-            frame_diff[current_hand_mask == 1] = 0
-            frame_diff[previous_hand_mask == 1] = 0
+            frame_diff = frame_diff*current_hand_mask
+            frame_diff = frame_diff*previous_hand_mask
             frame_diff[hand_region == 0] = 0
-
+            cv2.imshow('hand', current_hand_mask)
 
         frame_diff[self.threshold_image > 0] = frame_diff[self.threshold_image > 0] * 100
         frame_diff = cv2.blur(frame_diff, (3,frame_diff.shape[0]))
@@ -75,6 +83,7 @@ class MotionDetector:
         frame_diff = np.zeros(current_frame[:,:, 0].shape)
         return(frame_diff)
 
+
     def detect_key_stroke(self, current_frame, previous_frame, is_synthesia):
         """"Detects the motion and the hand mask for the current frame"""
         if not is_synthesia :
@@ -85,6 +94,7 @@ class MotionDetector:
             self.previous_hand_mask = np.zeros(current_frame.shape)
 
 
+
         white_key_diff = self.detect_white_key_motion(current_frame, previous_frame,self.current_hand_mask,
                                                       self.previous_hand_mask, is_synthesia)
         black_key_diff = self.detect_black_key_motion(current_frame, previous_frame,self.current_hand_mask,
@@ -93,11 +103,11 @@ class MotionDetector:
         """"Sums up the values fo the two images"""
         total_diff = white_key_diff + black_key_diff
         """"Removes noisy values from image"""
-        # for kernel_size in [5]:
-        #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, 3))
-        #     im = np.zeros((50, 50), dtype=np.uint8)
-        #     im[50:, 50:] = 255
-        #     total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=2)
+        for kernel_size in [11]:
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, 3))
+            im = np.zeros((50, 50), dtype=np.uint8)
+            im[50:, 50:] = 255
+            total_diff = cv2.morphologyEx(total_diff, cv2.MORPH_OPEN, kernel, iterations=1)
 
         """"Removes noisy values from image"""
         for kernel_size in [5, 3, 5, 3]:
@@ -111,18 +121,28 @@ class MotionDetector:
         """"Collects the motion values from the motion image using the key map"""
         for key_number in range(len(self.key_motion_values)):
             self.key_motion_values[key_number] = np.sum(total_diff[self.key_map == key_number])
+
         pressed_keys = self.gets_pressed_keys(self.key_motion_values, 4)
+
         for pressed_key in pressed_keys:
-            self.map_copy[self.key_map == pressed_key] = 1000
+            self.map_copy[self.key_map == pressed_key] = 255
+            for key in self.key_mappings:
+                if(key.encode(key.id, key.octave) == pressed_key):
+                    cv2.putText(self.map_copy, KeyValue.to_string(key.id) + str(key.octave), (key.x1i+5, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                                (0, 0, 0), lineType=cv2.LINE_AA)
+
+
         cv2.imshow('pressed_key ',self.map_copy)
         cv2.imshow('difference seen ', np.uint8(total_diff * 255))
-        for pressed_key in pressed_keys:
-            self.map_copy[self.key_map == pressed_key ] = self.key_map[self.key_map == pressed_key]
+        self.map_copy = self.key_map.copy()
+
 
     def get_motion_frame(self,  current_frame, previous_frame):
         """"Detects the motion and the hand mask for the current frame"""
         self.current_hand_mask = self.detect_hand(current_frame)
         self.previous_hand_mask= self.detect_hand(previous_frame)
+
+
 
         white_key_diff = self.detect_white_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
         black_key_diff = self.detect_black_key_motion(current_frame, previous_frame,self.current_hand_mask, self.previous_hand_mask)
