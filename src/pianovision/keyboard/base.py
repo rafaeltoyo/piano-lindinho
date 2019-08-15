@@ -47,5 +47,6 @@ class KeyboardHandler:
         cv2.imshow("Keyboard - Original", self.keyboard.image)
         cv2.imshow("Keyboard - Cropped", self.keyboard.cropped)
         cv2.imshow("Keyboard - Binarized", self.keyboard.mask.thresh)
+        cv2.imshow("Keyboard - Mask/Mapping View", self.keyboard.mask.createMask(visual=True))
         cv2.imshow("Keyboard - Mask/Mapping", self.keyboard.mask.createMask(visual=False))
         cv2.waitKey()
